@@ -1369,6 +1369,41 @@
         <div id="sm-stats"></div>
       </div>
 
+      <div class="setup-section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <div class="setup-label" style="margin-bottom:0;">📈 레벨 스트레치</div>
+          <button onclick="resetStretchSettings()" style="padding:3px 10px;border-radius:12px;border:1px solid var(--border);background:none;font-family:inherit;font-size:0.72rem;color:var(--muted);cursor:pointer;" title="ZPD 기본값으로 리셋">기본값</button>
+        </div>
+        <div class="setup-desc">높은 레벨 문제를 얼마나 섞을지 설정합니다. 내 레벨보다 어려운 문제를 많이 섞을수록 실력이 빠르게 향상됩니다.</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+          <!-- 편안한 복습 슬라이더 -->
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:0.78rem;color:var(--text);">🟢 편안한 복습 <span style="font-size:0.7rem;color:var(--muted);">(내 레벨 ±100)</span></span>
+              <span id="stretch-comfort-val" style="font-size:0.78rem;font-weight:600;color:var(--accent);">50%</span>
+            </div>
+            <input type="range" id="stretch-comfort" min="10" max="80" step="5" value="50"
+              oninput="onStretchSlider()"
+              style="width:100%;accent-color:var(--accent);">
+          </div>
+          <!-- 적정 도전 슬라이더 -->
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+              <span style="font-size:0.78rem;color:var(--text);">🟡 적정 도전 <span style="font-size:0.7rem;color:var(--muted);">(내 레벨 +100~250)</span></span>
+              <span id="stretch-challenge-val" style="font-size:0.78rem;font-weight:600;color:var(--accent2);">30%</span>
+            </div>
+            <input type="range" id="stretch-challenge" min="5" max="60" step="5" value="30"
+              oninput="onStretchSlider()"
+              style="width:100%;accent-color:var(--accent2);">
+          </div>
+          <!-- 스트레치 자동계산 표시 -->
+          <div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg);border-radius:8px;padding:8px 12px;">
+            <span style="font-size:0.78rem;color:var(--text);">🔴 스트레치 도전 <span style="font-size:0.7rem;color:var(--muted);">(내 레벨 +250~400)</span></span>
+            <span id="stretch-val" style="font-size:0.78rem;font-weight:600;color:var(--wrong);">20%</span>
+          </div>
+        </div>
+      </div>
+
       <button class="start-btn" onclick="startQuiz()">시작하기 →</button>
     </div>
   </div>
@@ -1644,6 +1679,13 @@
       <div id="pq-mic-status" style="font-size:0.75rem;color:var(--muted);">버튼을 눌러 발음하세요</div>
     </div>
 
+    <!-- 항상 표시되는 액션 버튼 (어려워요 / 스킵 / 제외) -->
+    <div style="width:100%;max-width:560px;display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="quiz-unsure-btn" style="flex:1;" onclick="pqHard()">😓 어려워요</button>
+      <button class="quiz-unsure-btn" style="flex:1;border-color:var(--muted);color:var(--muted);" onclick="pqPass()">⏭ 스킵</button>
+      <button id="pq-exclude-btn" class="quiz-unsure-btn" style="flex:1;border-color:var(--muted);color:var(--muted);" onclick="pqExcludeWord(pqCurrentWord.en)">🚫 제외</button>
+    </div>
+
     <!-- 인식 결과 (compact) -->
     <div id="pq-result-area" style="width:100%;max-width:560px;display:none;flex-direction:column;gap:6px;">
       <div style="background:var(--bg);border-radius:10px;padding:10px 14px;display:flex;align-items:center;gap:10px;justify-content:space-between;">
@@ -1660,15 +1702,9 @@
       </div>
     </div>
 
-    <!-- 액션 버튼 -->
+    <!-- 정답 후 다음 버튼 -->
     <div id="pq-action-row" style="display:none;width:100%;max-width:560px;gap:8px;flex-wrap:wrap;">
-      <button class="quiz-unsure-btn" style="flex:1;" onclick="pqHard()">😓 어려워요</button>
-      <button id="pq-exclude-btn" class="quiz-unsure-btn" style="flex:1;border-color:var(--muted);color:var(--muted);" onclick="pqExcludeWord(pqCurrentWord.en)">🚫 제외</button>
       <button class="start-btn" style="flex:1;margin:0;padding:10px;" onclick="pqNext()">다음 →</button>
-    </div>
-    <!-- 마이크 아래 패스 버튼 (결과 표시 전에도 항상 노출) -->
-    <div id="pq-pass-row" style="width:100%;max-width:560px;text-align:center;margin-top:-4px;">
-      <button onclick="pqPass()" style="background:none;border:none;color:var(--muted);font-family:inherit;font-size:0.78rem;cursor:pointer;padding:4px 10px;border-radius:6px;transition:color 0.15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">⏭ 이 단어 패스</button>
     </div>
 
     <!-- 이전 문제 네비게이션 -->
@@ -2161,11 +2197,14 @@ function renderGrid() {
       ontouchmove="cancelLongPress()">
       <div class="select-checkbox">${isSelected?'✓':''}</div>
       <div class="word-en${isSentence?' sentence-text':''}">${w.en}</div>
-      ${w.pron ? `<div class="word-pron">${w.pron} <button class="speak-btn" onclick="event.stopPropagation();speak('${safeEn}')" title="발음 듣기">🔊</button></div>` : `<button class="speak-btn" onclick="event.stopPropagation();speak('${safeEn}')" title="발음 듣기">🔊</button>`}
+      ${w.pron ? `<div class="word-pron">${w.pron}</div>` : ''}
       <div class="word-ko">${w.ko}</div>
       ${w.ex ? `<div class="word-ex">${w.ex}</div>` : '<div class="word-ex" style="display:none"></div>'}
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;position:absolute;top:12px;right:12px;">
+        <div class="cat-tag" style="position:static;">${w.cat}</div>
+        <button class="speak-btn" onclick="event.stopPropagation();speak('${safeEn}')" title="발음 듣기" style="font-size:0.95rem;padding:0;">🔊</button>
+      </div>
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-        <div class="cat-tag">${w.cat}</div>
         <span style="font-size:0.65rem;color:var(--muted);padding:2px 6px;border-radius:8px;border:1px solid var(--border);">Lv.${getWordLevel(w)}</span>
       </div>
       <button class="star-btn${isStar?' starred':''}" onclick="toggleStar(event,'${safeEn}')">★</button>
@@ -2350,11 +2389,44 @@ function levelToCEFR(lv) {
   return 'C2';
 }
 
-// 출제 가중치: 내 레벨과 가까울수록 높음
-// 복습 due 단어도 레벨 필터 적용 (내 레벨 ±200 이내만, 최소 0.1 보장)
+// ── 스트레치 설정 (ZPD 기반 기본값) ──
+// comfort: 내 레벨 ±100 이내 비중, challenge: +100~250, stretch: +250~400
+// 세 값의 합이 100이 되도록 유지 (comfort + challenge 를 슬라이더로 조절, stretch 는 자동)
+let stretchComfort   = 50; // %
+let stretchChallenge = 30; // %
+// stretch = 100 - comfort - challenge (자동계산)
+const STRETCH_DEFAULT = { comfort: 50, challenge: 30 };
+
+function saveStretchSettings() {
+  localStorage.setItem('stretch_settings', JSON.stringify({ comfort: stretchComfort, challenge: stretchChallenge }));
+}
+function loadStretchSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('stretch_settings') || '{}');
+    if (s.comfort   != null) stretchComfort   = s.comfort;
+    if (s.challenge != null) stretchChallenge = s.challenge;
+  } catch {}
+}
+
+// 출제 가중치: 스트레치 설정에 따른 비대칭 가중치
 function levelWeight(wordLevel, myLevel) {
-  const diff = Math.abs(wordLevel - myLevel);
-  return Math.max(0.05, Math.exp(-diff / 180));
+  const diff = wordLevel - myLevel; // 양수 = 어려운 방향
+  const stretchPct = 100 - stretchComfort - stretchChallenge; // 나머지가 스트레치
+
+  // 편안 구간 (±100): comfort 비중에 비례
+  if (diff >= -100 && diff <= 100) return 0.4 + (stretchComfort / 100) * 0.6;
+
+  // 도전 구간 (+100~+250): challenge 비중에 비례
+  if (diff > 100 && diff <= 250) return 0.05 + (stretchChallenge / 100) * 0.7;
+
+  // 스트레치 구간 (+250~+400): stretch 비중에 비례
+  if (diff > 250 && diff <= 400) return 0.02 + (stretchPct / 100) * 0.4;
+
+  // 너무 쉬운 구간 (< -100): 빠르게 감소
+  if (diff < -100) return Math.max(0.03, Math.exp((diff + 100) / 150));
+
+  // 너무 어려운 구간 (> +400): 거의 안 나옴
+  return 0.02;
 }
 
 function getStudyBadge(word, srEntry) {
@@ -3201,7 +3273,8 @@ function downloadAll() {
     study_history: studyHistory, accent, tts_rate: ttsRateVal,
     pron_tips_code: pronTipsCode,
     pron_error_log: pronErrorLog,
-    pq_accepted: PQ_ACCEPTED
+    pq_accepted: PQ_ACCEPTED,
+    stretch_settings: { comfort: stretchComfort, challenge: stretchChallenge }
   }, `vocab_full_${_today()}.json`);
 }
 
@@ -3321,6 +3394,16 @@ function uploadAll(event) {
       }
       savePqAccepted();
       msgs.push('STT 허용 목록 복원');
+    }
+
+    // 스트레치 설정 복원
+    if (imported.stretch_settings) {
+      const ss = imported.stretch_settings;
+      if (ss.comfort   != null) stretchComfort   = ss.comfort;
+      if (ss.challenge != null) stretchChallenge = ss.challenge;
+      saveStretchSettings();
+      updateStretchUI();
+      msgs.push('스트레치 설정 복원');
     }
 
     refreshAll();
@@ -3819,6 +3902,9 @@ function loadQuizSettings() {
     if (s.quizN) quizN = s.quizN;
     if (s.sqN)   sqN   = s.sqN;
     if (s.quizTypeFilter) quizTypeFilter = new Set(s.quizTypeFilter);
+    // 하위 호환: 구버전 quiz_settings에 stretch가 저장돼 있으면 마이그레이션
+    if (s.stretchComfort   != null && localStorage.getItem('stretch_settings') == null) stretchComfort   = s.stretchComfort;
+    if (s.stretchChallenge != null && localStorage.getItem('stretch_settings') == null) stretchChallenge = s.stretchChallenge;
   } catch {}
 }
 
@@ -3835,6 +3921,8 @@ function applyQuizSettingsUI() {
   document.querySelectorAll('[data-sq]').forEach(b => {
     b.classList.toggle('active', parseInt(b.dataset.sq) === sqN || (sqN === 999 && b.dataset.sq === '999'));
   });
+  // 스트레치 슬라이더
+  updateStretchUI();
 }
 
 // selectN / sqSelectN 저장 연동
@@ -3850,6 +3938,37 @@ function sqSelectN(btn, n) {
   sqN = n;
   document.querySelectorAll('[data-sq]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  saveQuizSettings();
+}
+
+// ── 스트레치 슬라이더 함수 ──
+function updateStretchUI() {
+  const cEl = document.getElementById('stretch-comfort');
+  const hEl = document.getElementById('stretch-challenge');
+  if (!cEl || !hEl) return;
+  cEl.value = stretchComfort;
+  hEl.value = stretchChallenge;
+  const s = Math.max(0, 100 - stretchComfort - stretchChallenge);
+  document.getElementById('stretch-comfort-val').textContent   = stretchComfort + '%';
+  document.getElementById('stretch-challenge-val').textContent = stretchChallenge + '%';
+  document.getElementById('stretch-val').textContent           = s + '%';
+}
+
+function onStretchSlider() {
+  const c = parseInt(document.getElementById('stretch-comfort').value);
+  let   h = parseInt(document.getElementById('stretch-challenge').value);
+  // 합이 95를 넘지 않도록 challenge 자동 조정 (최소 스트레치 5% 보장)
+  if (c + h > 95) h = Math.max(5, 95 - c);
+  stretchComfort   = c;
+  stretchChallenge = h;
+  updateStretchUI();
+  saveQuizSettings();
+}
+
+function resetStretchSettings() {
+  stretchComfort   = STRETCH_DEFAULT.comfort;
+  stretchChallenge = STRETCH_DEFAULT.challenge;
+  updateStretchUI();
   saveQuizSettings();
 }
 
@@ -4843,7 +4962,7 @@ function pqResetUI() {
   const exBtn = document.getElementById('pq-exclude-btn');
   if (exBtn) { exBtn.textContent = '🚫 제외'; exBtn.disabled = false; }
   // 어려워요 버튼 초기화
-  const hardBtn = document.querySelector('#pq-action-row .quiz-unsure-btn:first-child');
+  const hardBtn = document.querySelector('[onclick="pqHard()"]');
   if (hardBtn) { hardBtn.textContent = '😓 어려워요'; hardBtn.disabled = false; }
   // TTS 자동 재생 → 종료 후 마이크 자동 시작
   pqAutoSpeak();
@@ -5359,6 +5478,9 @@ function pqHandleResult(recognized, isCorrect, alternatives) {
   document.getElementById('pq-mic-status').textContent    = isCorrect ? '잘 하셨어요! (🎤 누르면 재시도)' : '틀렸어요 — 🎤 누르면 재시도';
   document.getElementById('pq-prev-btn').style.display    = pqHistory.length > 1 ? 'inline-block' : 'none';
   document.getElementById('pq-current-btn').style.display = 'none';
+  // 정답 후: 어려워요 버튼 상태 리셋
+  const hardBtn = document.querySelector('[onclick="pqHard()"]');
+  if (hardBtn) { hardBtn.disabled = false; hardBtn.textContent = '😓 어려워요'; }
 
   // 예문 표시 (정답/오답 모두)
   const pqExEl = document.getElementById('pq-ex');
@@ -5422,6 +5544,7 @@ function endPronQuiz()  { pqShowResult(); }
 function showPronSetup(){ initPronQuiz(); }
 
 // INIT
+loadStretchSettings();
 loadQuizSettings();
 buildFilters();
 renderGrid();
