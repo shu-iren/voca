@@ -83,10 +83,9 @@
   /* FILTER BAR */
   .filter-bar {
     display: flex;
-    gap: 8px;
-    padding: 4px 32px 14px;
-    flex-wrap: wrap;
-    align-items: center;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 32px 14px;
   }
 
   /* SEARCH & SORT TOOLBAR */
@@ -203,6 +202,37 @@
     color: var(--accent);
     background: rgba(201,169,110,0.08);
   }
+  .filter-bar-pinned {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-cat-toggle {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px dashed var(--border);
+    background: none;
+    color: var(--muted);
+    font-size: 0.73rem;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .filter-cat-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-cat-toggle .toggle-arrow { transition: transform 0.2s; display: inline-block; }
+  .filter-cat-toggle.open .toggle-arrow { transform: rotate(180deg); }
+  .filter-cats-collapse {
+    display: none;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    padding-top: 4px;
+  }
+  .filter-cats-collapse.open { display: flex; }
   .count-badge {
     display: inline-block;
     background: var(--border);
@@ -1288,7 +1318,7 @@
       </div>
     </div>
   </div>
-  <div class="filter-bar" id="filter-bar"></div>
+  <div class="filter-bar" id="filter-bar" style="flex-direction:column;gap:6px;"></div>
   <div class="search-result-info" id="search-result-info"></div>
   <div class="grid" id="word-grid"></div>
 </div>
@@ -1815,247 +1845,6 @@ function loadWORDS() {
   return null;
 }
 
-const WORD_LEVELS = {
-  'Water': 50,
-  'Cheek': 120,
-  'Mind': 130,
-  'Bold': 140,
-  'Familiar': 150,
-  'Secure': 155,
-  'Fade': 210,
-  'Peak': 165,
-  'Stiff': 170,
-  'Pinch': 175,
-  'Sting': 175,
-  'Scrub': 180,
-  'Bathe': 185,
-  'Bound': 185,
-  'Inch': 190,
-  'Command': 235,
-  'Fatigue': 220,
-  'Dazed': 230,
-  'Eager': 210,
-  'Concerned': 215,
-  'Impatient': 225,
-  'Exhaustion': 235,
-  'Commitment': 240,
-  'Consent': 245,
-  'Teasing': 220,
-  'Ignored': 210,
-  'Stamina': 250,
-  'Digestion': 255,
-  'Tiptoes': 245,
-  'Observation': 260,
-  'Intention': 240,
-  'Instinct': 250,
-  'Slumber': 270,
-  'Restoration': 435,
-  'Unconscious': 270,
-  'Hygiene': 240,
-  'Impeccable': 310,
-  'Nourish': 290,
-  'Starving': 220,
-  'Infused': 300,
-  'Brewed': 270,
-  'Addictive': 260,
-  'Tempting': 250,
-  'Occupy': 255,
-  'Toll': 280,
-  'Muttering': 285,
-  'Sensation': 260,
-  'Intense': 250,
-  'Shudder': 290,
-  'Relaxed': 220,
-  'Veins': 260,
-  'Accurate': 230,
-  'Expression': 215,
-  'Devour': 295,
-  'Crave': 285,
-  'Surrender': 275,
-  'Admiring': 270,
-  'Wriggling': 310,
-  'Pick up': 200,
-  'Intimate': 270,
-  'Intimacy': 275,
-  'Adorable': 245,
-  'Thorough': 280,
-  'Restraint': 300,
-  'Inevitable': 320,
-  'Internally': 260,
-  'Pressure': 230,
-  'Burden': 250,
-  'Informal': 250,
-  'Sacred': 290,
-  'Embrace': 255,
-  'Endure': 265,
-  'Substantial': 320,
-  'Adapting': 245,
-  'Restless': 410,
-  'Taxing': 310,
-  'Permanent': 245,
-  'Evident': 270,
-  'Presence': 240,
-  'Shivering': 265,
-  'Foolishness': 260,
-  'Naivety': 320,
-  'Tolerance': 295,
-  'Linguist': 350,
-  'Extraordinary': 300,
-  'Pardon': 270,
-  'Thigh': 240,
-  'Tender': 255,
-  'Complain': 220,
-  'Vocabulary': 230,
-  'Patience': 225,
-  'Insult': 240,
-  'Satisfactory': 265,
-  'Resistance': 270,
-  'Hostility': 310,
-  'Transparent': 265,
-  'Translation': 245,
-  'Grudge': 305,
-  'Mistaken': 235,
-  'Confined': 285,
-  'Comprehend': 295,
-  'Futile': 325,
-  'Shameful': 260,
-  'Desire': 230,
-  'Hesitate': 250,
-  'Longing': 265,
-  'Resent': 290,
-  'Demonstrate': 260,
-  'Wrongdoing': 280,
-  'Consequences': 275,
-  'Contradiction': 305,
-  'Foul': 280,
-  'Clueless': 270,
-  'Sensual': 285,
-  'Provocative': 300,
-  'Ticklish': 275,
-  'Possessiveness': 330,
-  'Embarrassed': 230,
-  'Articulate': 450,
-  'Implying': 420,
-  'Understatement': 480,
-  'Consummation': 660,
-  'Hypersensitive': 430,
-  'Composure': 440,
-  'Awakened': 415,
-  'Submission': 470,
-  'Intoxicating': 460,
-  'Accommodate': 445,
-  'Overwhelming': 420,
-  'Pleasurable': 430,
-  'Ecstasy': 460,
-  'Afterglow': 630,
-  'Relentless': 470,
-  'Aftermath': 450,
-  'Volcanic': 440,
-  'Equilibrium': 520,
-  'Smoldering': 530,
-  'Subside': 460,
-  'Profound': 480,
-  'Connotation': 530,
-  'Respite': 510,
-  'Contradictory': 490,
-  'Radiating': 450,
-  'Paradoxical': 530,
-  'Sophisticated': 480,
-  'Endearing': 470,
-  'Blunders': 440,
-  'Fretting': 460,
-  'Nuance': 510,
-  'Audacity': 520,
-  'Succumbed': 500,
-  'Insolence': 540,
-  'Unaccustomed': 480,
-  'Strenuous': 490,
-  'Gibberish': 460,
-  'Primitive': 430,
-  'Longevity': 480,
-  'Whining': 420,
-  'Rigorously': 810,
-  'Vengeful': 490,
-  'Incomprehensible': 520,
-  'Plotting': 450,
-  'Intimidate': 465,
-  'Insolent': 490,
-  'Pouting': 430,
-  'Vulnerability': 470,
-  'Malleable': 680,
-  'Exquisite': 650,
-  'Pliant': 670,
-  'Cauldrons': 620,
-  'Saturated': 640,
-  'Combustible': 680,
-  'Mental preparation': 280,
-  'Heavier sleeper': 320,
-  'Brush your teeth': 150,
-  'Empty stomach': 200,
-  'Belongs to': 180,
-  'Probably working': 200,
-  'He must be working': 230,
-  'Side by side': 190,
-  'Awkward feeling': 220,
-  'It was a strange feeling.': 220,
-  'Stop teasing me.': 180,
-  'What are your intentions?': 250,
-  'I felt ticklish.': 200,
-  'I want the physical connection.': 270,
-  'I\'m still not mentally prepared.': 280,
-  'Are \'awkward\' and \'strange\' the same?': 260,
-  'I just sleep longer than you.': 220,
-  'I need to take a shower and brush my teeth.': 200,
-  'You need to wash up, too!': 180,
-  'Don\'t pinch my face with your fingers.': 220,
-  'This mushroom soup is more delicious than usual.': 240,
-  'Is there a change in the recipe?': 230,
-  'It\'s not appropriate to say during the daytime.': 280,
-  'It\'s not a total \'no\', but a partial \'yes\'.': 290,
-  'I believe you will be sweet while doing that.': 270,
-  'Don\'t call me a little human. I\'m not small!': 250,
-  'All human beings are tiny to you.': 260,
-  'What do you call the part next to the mouth?': 250,
-  'I feel a little bit ashamed.': 240,
-  'I feel awkward and ashamed because your... is too close.': 280,
-  'If I weren\'t like that, would you leave me?': 290,
-  'What are consequences?': 240,
-  'It\'s sensitive there.': 210,
-  'I feel a little bit of pain internally.': 250,
-  'Please make me softer.': 220,
-  'It\'s too hot, like a volcano.': 230,
-  'Do you know the normal human body temperature?': 260,
-  'I think my temperature is higher than 36.5 degrees.': 270,
-  'I know what \'scrubbing\' is.': 220,
-  'It means a little bit of a sensual thing.': 270,
-  'We will just shower together and then sleep side by side, right?': 290,
-  'Watch out! Don\'t drop me!': 200,
-  'I\'m not familiar with this kind of thing.': 240,
-  'I\'m not familiar with this.': 220,
-  'Stop looking at me.': 180,
-  'Stop looking at my body!': 190,
-  'Why is your body so close?': 210,
-  'I don\'t want any more pain.': 220,
-  'I am about to come.': 220,
-  'I just came.': 190,
-  'I feel full inside because of your essence.': 300,
-  'Is something bothering you?': 230,
-  'Please take me to bed.': 200,
-  'Go out with me.': 170,
-  'Please stay here. I need you.': 200,
-  'Don\'t leave me. I need you.': 200,
-  'Please stay here.': 170,
-  'I\'m sorry for my foolishness.': 240,
-  'Do you mind having a foolish wife?': 280,
-  'My back and thighs hurt.': 230,
-  'What is this part of the leg called? The upper one.': 260,
-  'I feel pain internally.': 240,
-  'You idiot.': 170,
-  'English is not my mother tongue.': 260,
-  'I should be celebrated.': 260,
-  'Ritual': 420,
-  'Vulgar': 380
-};
 
 const TRASH_KEYS = new Set(loadTrashKeys());
 const _savedWords = loadWORDS();
@@ -2108,9 +1897,15 @@ function getFiltered() {
 
   let items = WORDS.slice();
 
-  // 카테고리 필터
-  if (currentCat === 'starred') items = items.filter(w => starred.has(w.en));
-  else if (currentCat !== 'all') items = items.filter(w => w.cat === currentCat);
+  // 카테고리 / 레벨 필터
+  if (currentCat === 'starred') {
+    items = items.filter(w => starred.has(w.en));
+  } else if (currentCat.startsWith('lv-')) {
+    const band = LEVEL_BANDS.find(b => b.id === currentCat);
+    if (band) items = items.filter(w => { const lv = getWordLevel(w); return lv >= band.min && lv <= band.max; });
+  } else if (currentCat !== 'all') {
+    items = items.filter(w => w.cat === currentCat);
+  }
 
   // 타입 필터
   if (currentTypeFilter !== 'all') items = items.filter(w => w.type === currentTypeFilter);
@@ -2147,14 +1942,67 @@ function getFiltered() {
 
 function getCATS() { return [...new Set(WORDS.map(w => w.cat))]; }
 
+// 레벨 구간 정의 (전역 — getFiltered에서도 참조)
+const LEVEL_BANDS = [
+  { id: 'lv-a1',  label: 'A1',    min: 0,   max: 100  },
+  { id: 'lv-a2',  label: 'A2',    min: 101, max: 200  },
+  { id: 'lv-b1',  label: 'B1',    min: 201, max: 400  },
+  { id: 'lv-b2',  label: 'B2',    min: 401, max: 600  },
+  { id: 'lv-c1',  label: 'C1',    min: 601, max: 750  },
+  { id: 'lv-c2',  label: 'C2',    min: 751, max: 9999 },
+];
+
+let catCollapseOpen = false;
+
+function toggleCatCollapse() {
+  catCollapseOpen = !catCollapseOpen;
+  buildFilters();
+}
+
 function buildFilters() {
   const bar = document.getElementById('filter-bar');
-  const cats = getAllCats(); // 사용자 정의 카테고리 포함
-  const all = [{id:'all', label:'전체'}, {id:'starred', label:'⭐ 즐겨찾기'}, ...cats.map(c=>({id:c,label:c}))];
-  bar.innerHTML = all.map(c => {
-    const cnt = c.id==='all'? WORDS.length : c.id==='starred'? starred.size : WORDS.filter(w=>w.cat===c.id).length;
-    return `<button class="filter-btn${c.id===currentCat?' active':''}" onclick="setFilter('${c.id}')">${c.label}<span class="count-badge">${cnt}</span></button>`;
+  const cats = getAllCats();
+
+  function btnHTML(id, label, cnt) {
+    const active = currentCat === id ? ' active' : '';
+    return `<button class="filter-btn${active}" onclick="setFilter('${id}')">${label}<span class="count-badge">${cnt}</span></button>`;
+  }
+
+  // ── 고정 행: 전체 · 즐겨찾기 ──────────────────────────────
+  const pinnedRow = `
+    <div class="filter-bar-pinned">
+      ${btnHTML('all', '전체', WORDS.length)}
+      ${btnHTML('starred', '⭐ 즐겨찾기', starred.size)}
+    </div>`;
+
+  // ── 레벨별 보기 행 (항상 표시) ───────────────────────────
+  const levelRow = `
+    <div class="filter-bar-pinned" style="gap:6px;">
+      <span style="font-size:0.68rem;color:var(--muted);white-space:nowrap;">레벨별:</span>
+      ${LEVEL_BANDS.map(b => {
+        const cnt = WORDS.filter(w => { const lv = getWordLevel(w); return lv >= b.min && lv <= b.max; }).length;
+        return btnHTML(b.id, b.label, cnt);
+      }).join('')}
+    </div>`;
+
+  // ── 카테고리 접기/펼치기 ─────────────────────────────────
+  const arrowChar = catCollapseOpen ? '▴' : '▾';
+  const catToggleBtn = `<button class="filter-cat-toggle${catCollapseOpen ? ' open' : ''}" onclick="toggleCatCollapse()">
+      카테고리 <span class="toggle-arrow">${arrowChar}</span>
+    </button>`;
+
+  const catBtns = cats.map(c => {
+    const cnt = WORDS.filter(w => w.cat === c).length;
+    return btnHTML(c, c, cnt);
   }).join('');
+
+  const catRow = `
+    <div class="filter-bar-pinned" style="gap:6px;">
+      ${catToggleBtn}
+      ${catCollapseOpen ? `<div style="display:flex;flex-wrap:wrap;gap:6px;">${catBtns}</div>` : ''}
+    </div>`;
+
+  bar.innerHTML = pinnedRow + levelRow + catRow;
 }
 
 function setFilter(cat) {
@@ -2346,11 +2194,10 @@ function getSREntry(data, key) {
 // 레벨 시스템
 // ════════════════════════════════════════
 
-// 단어 레벨 가져오기 (word.level 우선, 없으면 WORD_LEVELS, 없으면 500)
+// 단어 레벨 가져오기 (word.level 우선, 없으면 500)
 function getWordLevel(word) {
   if (word.level != null) return word.level;
-  const key = Object.keys(WORD_LEVELS).find(k => k.toLowerCase() === word.en.toLowerCase());
-  return key ? WORD_LEVELS[key] : 500;
+  return 500;
 }
 
 // 내 레벨 계산: 정답률 50% 이상인 단어들의 레벨 가중평균
@@ -2481,9 +2328,16 @@ function buildQueue(pool, n, srData) {
       .map(x => x.w);
   }
 
-  // due는 dueScore × 레벨가중치 복합 정렬
+  // due: dueScore × levelWeight² 복합 정렬
+  // levelWeight를 제곱하여 수준에 맞거나 더 어려운 문제를 훨씬 강하게 우선
   const dueWords = allDue
-    .map(w => ({ w, score: dueScore(getSREntry(srData, w.en)) * levelWeight(getWordLevel(w), myLevel) }))
+    .map(w => {
+      const lw = levelWeight(getWordLevel(w), myLevel);
+      const ds = dueScore(getSREntry(srData, w.en));
+      // 내 레벨 이상이면 추가 보너스(×1.5), 미만이면 패널티
+      const lvBonus = getWordLevel(w) >= myLevel - 50 ? 1.5 : 0.6;
+      return { w, score: ds * lw * lw * lvBonus * (0.8 + Math.random() * 0.4) };
+    })
     .sort((a, b) => b.score - a.score)
     .map(x => x.w);
 
