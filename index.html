@@ -1012,6 +1012,7 @@
   <button class="tab" onclick="switchTab('quiz')">✏️ 단어 퀴즈</button>
   <button class="tab" onclick="switchTab('sentquiz')">🔤 문장 퀴즈</button>
   <button class="tab" onclick="switchTab('pronquiz')">🎤 발음 연습</button>
+  <button class="tab" onclick="switchTab('leveltest')">🎯 레벨 테스트</button>
   <button class="tab" onclick="switchTab('stats')">📊 통계</button>
   <button class="tab" onclick="switchTab('data')">💾 데이터 관리</button>
   <button class="tab" onclick="switchTab('trash')">🗑 휴지통</button>
@@ -1235,6 +1236,85 @@
   </div>
   <input class="trash-search" id="trash-search" placeholder="휴지통에서 검색..." oninput="renderTrash()">
   <div id="trash-list"></div>
+</div>
+
+<!-- LEVEL TEST VIEW -->
+<div id="view-leveltest" style="display:none; padding:24px 32px; flex-direction:column; align-items:center; gap:20px;">
+
+  <!-- SETUP -->
+  <div id="lt-setup" style="width:100%;max-width:560px;">
+    <div class="setup-card">
+      <div class="setup-title">🎯 레벨 테스트</div>
+      <div class="setup-section">
+        <div class="setup-desc">각 CEFR 등급(A1~C2)에서 단어를 골고루 출제해 현재 영어 실력을 측정합니다.<br>결과는 학습 통계에 반영됩니다.</div>
+      </div>
+      <div class="setup-section">
+        <div class="setup-label">문제 수</div>
+        <div class="setup-options">
+          <button class="setup-opt" data-ltn="12" onclick="ltSelectN(this,12)">12개 <span style="font-size:0.7rem;color:var(--muted);">빠름</span></button>
+          <button class="setup-opt active" data-ltn="24" onclick="ltSelectN(this,24)">24개 <span style="font-size:0.7rem;color:var(--muted);">표준</span></button>
+          <button class="setup-opt" data-ltn="36" onclick="ltSelectN(this,36)">36개 <span style="font-size:0.7rem;color:var(--muted);">정밀</span></button>
+        </div>
+      </div>
+      <div class="setup-section">
+        <div class="setup-label">문제 방향</div>
+        <div class="setup-options">
+          <button class="setup-opt active" data-ltdir="en" onclick="ltSelectDir(this,'en')">영어 → 한국어</button>
+          <button class="setup-opt" data-ltdir="ko" onclick="ltSelectDir(this,'ko')">한국어 → 영어</button>
+        </div>
+      </div>
+      <div id="lt-band-preview" style="display:flex;flex-direction:column;gap:6px;background:var(--bg);border-radius:10px;padding:12px 14px;"></div>
+      <button class="start-btn" onclick="startLevelTest()">테스트 시작 →</button>
+    </div>
+  </div>
+
+  <!-- PLAY -->
+  <div id="lt-play" style="display:none;flex-direction:column;align-items:center;gap:16px;width:100%;">
+    <div class="quiz-score">
+      <div>진행 <span id="lt-done">0</span> / <span id="lt-total">0</span></div>
+      <div>정답 <span id="lt-correct-cnt">0</span></div>
+      <div id="lt-band-badge" style="font-size:0.78rem;padding:3px 10px;border-radius:12px;border:1px solid var(--border);color:var(--muted);"></div>
+      <button class="end-btn" onclick="endLevelTest()">그만하기</button>
+    </div>
+    <div style="width:100%;max-width:560px;">
+      <div class="progress-bar" style="margin-bottom:4px;"><div class="progress-fill" id="lt-prog"></div></div>
+    </div>
+    <div class="quiz-q" style="width:100%;max-width:560px;">
+      <div style="text-align:left;">
+        <div class="quiz-label" id="lt-label">뜻을 고르세요</div>
+      </div>
+      <div class="quiz-word" id="lt-word"></div>
+      <div class="flash-pron" id="lt-pron" style="margin-top:8px;display:none;"></div>
+      <button class="quiz-speak-btn" id="lt-speak-btn" onclick="speak(document.getElementById('lt-word').textContent)" style="display:none;">🔊</button>
+    </div>
+    <div class="quiz-options" id="lt-options"></div>
+    <div class="quiz-result" id="lt-result"></div>
+    <div style="width:100%;max-width:560px;text-align:right;min-height:28px;">
+      <button id="lt-skip-btn" style="display:none;background:none;border:none;color:var(--muted);font-family:inherit;font-size:0.78rem;cursor:pointer;padding:2px 4px;" onclick="ltNext()">다음으로 →</button>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div id="lt-result-screen" style="display:none;flex-direction:column;align-items:center;gap:20px;width:100%;">
+    <div class="result-card" style="max-width:560px;width:100%;">
+      <div class="result-emoji" id="lt-result-emoji">🎯</div>
+      <div class="result-title">레벨 테스트 완료!</div>
+      <div style="width:100%;">
+        <!-- 내 레벨 표시 -->
+        <div id="lt-my-level-block" style="text-align:center;margin-bottom:16px;">
+          <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;">측정된 레벨</div>
+          <div id="lt-cefr-result" style="font-size:2.8rem;font-weight:700;color:var(--accent);"></div>
+          <div id="lt-level-desc" style="font-size:0.85rem;color:var(--muted);margin-top:4px;"></div>
+        </div>
+        <!-- 구간별 정답률 바 -->
+        <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">구간별 정답률</div>
+        <div id="lt-band-bars" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+      <div id="lt-advice" style="font-size:0.83rem;color:var(--text);background:var(--bg);border-radius:10px;padding:14px 16px;line-height:1.7;width:100%;"></div>
+      <button class="start-btn" onclick="ltShowSetup()" style="margin-top:4px;">다시 테스트</button>
+      <button class="start-btn" style="margin-top:0;background:none;border:1.5px solid var(--accent);color:var(--accent);" onclick="switchTab('quiz')">퀴즈로 학습하기 →</button>
+    </div>
+  </div>
 </div>
 
 <!-- DATA MANAGEMENT VIEW -->
@@ -2072,28 +2152,30 @@ function toggleStar(e, en) {
 
 // TABS
 function switchTab(tab) {
-  const tabNames = ['home','list','flash','quiz','sentquiz','pronquiz','stats','data','trash'];
+  const tabNames = ['home','list','flash','quiz','sentquiz','pronquiz','leveltest','stats','data','trash'];
   document.querySelectorAll('.tab').forEach((t,i)=>{
     t.classList.toggle('active', tabNames[i]===tab);
   });
-  document.getElementById('view-home').style.display      = tab==='home'      ?'flex':'none';
-  document.getElementById('view-list').style.display      = tab==='list'      ?'block':'none';
-  document.getElementById('view-flash').style.display     = tab==='flash'     ?'flex':'none';
-  document.getElementById('view-quiz').style.display      = tab==='quiz'      ?'flex':'none';
-  document.getElementById('view-sentquiz').style.display  = tab==='sentquiz'  ?'flex':'none';
-  document.getElementById('view-pronquiz').style.display  = tab==='pronquiz'  ?'flex':'none';
-  document.getElementById('view-stats').style.display     = tab==='stats'     ?'flex':'none';
-  document.getElementById('view-trash').style.display     = tab==='trash'     ?'flex':'none';
-  document.getElementById('view-data').style.display      = tab==='data'      ?'flex':'none';
-  if (tab==='flash')     initFlash();
-  if (tab==='quiz')      initQuiz();
-  if (tab==='sentquiz')  initSentQuiz();
-  if (tab==='pronquiz')  initPronQuiz();
-  if (tab==='stats')     renderStats();
-  if (tab==='home')      renderHome();
-  if (tab==='data')      initDataTab();
-  if (tab==='trash')     renderTrash();
-  if (tab!=='list')      cancelSelect();
+  document.getElementById('view-home').style.display       = tab==='home'       ?'flex':'none';
+  document.getElementById('view-list').style.display       = tab==='list'       ?'block':'none';
+  document.getElementById('view-flash').style.display      = tab==='flash'      ?'flex':'none';
+  document.getElementById('view-quiz').style.display       = tab==='quiz'       ?'flex':'none';
+  document.getElementById('view-sentquiz').style.display   = tab==='sentquiz'   ?'flex':'none';
+  document.getElementById('view-pronquiz').style.display   = tab==='pronquiz'   ?'flex':'none';
+  document.getElementById('view-leveltest').style.display  = tab==='leveltest'  ?'flex':'none';
+  document.getElementById('view-stats').style.display      = tab==='stats'      ?'flex':'none';
+  document.getElementById('view-trash').style.display      = tab==='trash'      ?'flex':'none';
+  document.getElementById('view-data').style.display       = tab==='data'       ?'flex':'none';
+  if (tab==='flash')      initFlash();
+  if (tab==='quiz')       initQuiz();
+  if (tab==='sentquiz')   initSentQuiz();
+  if (tab==='pronquiz')   initPronQuiz();
+  if (tab==='leveltest')  initLevelTest();
+  if (tab==='stats')      renderStats();
+  if (tab==='home')       renderHome();
+  if (tab==='data')       initDataTab();
+  if (tab==='trash')      renderTrash();
+  if (tab!=='list')       cancelSelect();
 }
 
 // FLASHCARD
@@ -5398,8 +5480,269 @@ function pqShowResult() {
 function endPronQuiz()  { pqShowResult(); }
 function showPronSetup(){ initPronQuiz(); }
 
-// INIT
-loadStretchSettings();
+function endPronQuiz()  { pqShowResult(); }
+function showPronSetup(){ initPronQuiz(); }
+
+// ===================== LEVEL TEST =====================
+let ltN      = 24;
+let ltDir    = 'en';
+let ltQueue  = [];
+let ltIdx    = 0;
+let ltScores = {}; // { 'A1': {correct:0,total:0}, ... }
+let ltCurrent = null;
+let ltAnswered = false;
+let ltAutoTimer = null;
+
+function ltSelectN(btn, n) {
+  ltN = n;
+  document.querySelectorAll('[data-ltn]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ltRenderBandPreview();
+}
+
+function ltSelectDir(btn, dir) {
+  ltDir = dir;
+  document.querySelectorAll('[data-ltdir]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function initLevelTest() {
+  ltShowSetup();
+}
+
+function ltShowSetup() {
+  document.getElementById('lt-setup').style.display         = 'block';
+  document.getElementById('lt-play').style.display          = 'none';
+  document.getElementById('lt-result-screen').style.display = 'none';
+  ltRenderBandPreview();
+}
+
+function ltRenderBandPreview() {
+  const el = document.getElementById('lt-band-preview');
+  if (!el) return;
+  const perBand = Math.max(1, Math.floor(ltN / LEVEL_BANDS.length));
+  el.innerHTML = '<div style="font-size:0.72rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">구간별 출제 예정</div>' +
+    LEVEL_BANDS.map(b => {
+      const avail = WORDS.filter(w => { const lv = getWordLevel(w); return lv >= b.min && lv <= b.max; }).length;
+      const actual = Math.min(perBand, avail);
+      const barW = avail > 0 ? Math.round(actual / perBand * 100) : 0;
+      return `<div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:28px;font-size:0.72rem;font-weight:700;color:var(--accent);flex-shrink:0;">${b.label}</div>
+        <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+          <div style="width:${barW}%;height:100%;background:var(--accent);border-radius:3px;"></div>
+        </div>
+        <div style="font-size:0.7rem;color:var(--muted);width:60px;text-align:right;">${actual}문제 / ${avail}개</div>
+      </div>`;
+    }).join('');
+}
+
+function startLevelTest() {
+  // 구간별 균등 샘플링
+  const perBand = Math.max(1, Math.floor(ltN / LEVEL_BANDS.length));
+  ltQueue = [];
+  ltScores = {};
+  LEVEL_BANDS.forEach(b => {
+    ltScores[b.label] = { correct: 0, total: 0 };
+    const pool = WORDS.filter(w => { const lv = getWordLevel(w); return lv >= b.min && lv <= b.max; });
+    // 셔플 후 perBand개 추출
+    const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, perBand);
+    shuffled.forEach(w => ltQueue.push({ word: w, band: b.label }));
+  });
+  // 전체 섞기 (구간 순서 무작위)
+  ltQueue.sort(() => Math.random() - 0.5);
+  ltIdx = 0;
+  ltAnswered = false;
+
+  document.getElementById('lt-setup').style.display         = 'none';
+  document.getElementById('lt-play').style.display          = 'flex';
+  document.getElementById('lt-result-screen').style.display = 'none';
+  ltLoadQuestion();
+}
+
+function ltLoadQuestion() {
+  if (ltIdx >= ltQueue.length) { ltShowResult(); return; }
+  ltAnswered = false;
+  if (ltAutoTimer) { clearTimeout(ltAutoTimer); ltAutoTimer = null; }
+
+  const item = ltQueue[ltIdx];
+  ltCurrent = item;
+  const w = item.word;
+
+  // 배지
+  const badgeEl = document.getElementById('lt-band-badge');
+  badgeEl.textContent = item.band;
+  const bandColor = { A1:'var(--correct)', A2:'var(--correct)', B1:'var(--accent)', B2:'var(--accent)', C1:'var(--accent2)', C2:'var(--wrong)' };
+  badgeEl.style.borderColor = bandColor[item.band] || 'var(--border)';
+  badgeEl.style.color       = bandColor[item.band] || 'var(--muted)';
+
+  // 문제
+  document.getElementById('lt-label').textContent  = ltDir === 'en' ? '뜻을 고르세요' : '영어 단어를 고르세요';
+  document.getElementById('lt-word').textContent   = ltDir === 'en' ? w.en : w.ko;
+  document.getElementById('lt-word').className     = 'quiz-word' + (w.type === 'sentence' ? ' sentence-mode' : '');
+  document.getElementById('lt-result').textContent = '';
+
+  // 발음
+  const pronEl = document.getElementById('lt-pron');
+  const speakEl = document.getElementById('lt-speak-btn');
+  if (ltDir === 'en' && w.pron) { pronEl.textContent = w.pron; pronEl.style.display = 'block'; } else { pronEl.style.display = 'none'; }
+  speakEl.style.display = ltDir === 'en' ? 'inline-block' : 'none';
+
+  // 보기 4개 (정답 1 + 오답 3, 같은 구간 우선)
+  const band = LEVEL_BANDS.find(b => b.label === item.band);
+  let distPool = WORDS.filter(x => x.en !== w.en && getWordLevel(x) >= (band?.min ?? 0) && getWordLevel(x) <= (band?.max ?? 9999));
+  if (distPool.length < 3) distPool = WORDS.filter(x => x.en !== w.en);
+  const distractors = distPool.sort(() => Math.random() - 0.5).slice(0, 3);
+  const opts = [w, ...distractors].sort(() => Math.random() - 0.5);
+
+  document.getElementById('lt-options').innerHTML = opts.map(o => {
+    const label = ltDir === 'en' ? o.ko : o.en;
+    const safeEn = o.en.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<button class="quiz-opt" onclick="ltCheckAnswer(this,'${safeEn}')">${label}</button>`;
+  }).join('');
+
+  // 진행
+  document.getElementById('lt-done').textContent        = ltIdx + 1;
+  document.getElementById('lt-total').textContent       = ltQueue.length;
+  document.getElementById('lt-correct-cnt').textContent = Object.values(ltScores).reduce((s,v)=>s+v.correct,0);
+  document.getElementById('lt-prog').style.width        = `${((ltIdx) / ltQueue.length) * 100}%`;
+  document.getElementById('lt-skip-btn').style.display  = 'none';
+}
+
+function ltCheckAnswer(btn, en) {
+  if (ltAnswered) return;
+  ltAnswered = true;
+
+  const w = ltCurrent.word;
+  const band = ltCurrent.band;
+  const correct = en === w.en;
+
+  ltScores[band].total++;
+  if (correct) ltScores[band].correct++;
+  ltQueue[ltIdx]._correct = correct; // 개별 정답 기록
+
+  document.getElementById('lt-correct-cnt').textContent = Object.values(ltScores).reduce((s,v)=>s+v.correct,0);
+
+  if (correct) {
+    btn.classList.add('correct');
+    document.getElementById('lt-result').textContent = '✓ 정답!';
+  } else {
+    btn.classList.add('wrong');
+    document.querySelectorAll('#lt-options .quiz-opt').forEach(b => {
+      const label = ltDir === 'en' ? w.ko : w.en;
+      if (b.textContent === label) b.classList.add('correct');
+    });
+    document.getElementById('lt-result').textContent = `✗ 오답 — 정답: ${ltDir === 'en' ? w.ko : w.en}`;
+  }
+  document.querySelectorAll('#lt-options .quiz-opt').forEach(b => b.disabled = true);
+
+  const skipBtn = document.getElementById('lt-skip-btn');
+  skipBtn.style.display = 'inline-block';
+  skipBtn.onclick = ltNext;
+  ltAutoTimer = setTimeout(ltNext, 2500);
+}
+
+function ltNext() {
+  if (ltAutoTimer) { clearTimeout(ltAutoTimer); ltAutoTimer = null; }
+  ltIdx++;
+  ltLoadQuestion();
+}
+
+function endLevelTest() {
+  if (ltAutoTimer) { clearTimeout(ltAutoTimer); ltAutoTimer = null; }
+  ltShowResult();
+}
+
+function ltShowResult() {
+  document.getElementById('lt-play').style.display          = 'none';
+  document.getElementById('lt-result-screen').style.display = 'flex';
+
+  // 구간별 정답률 계산
+  const bandResults = LEVEL_BANDS.map(b => {
+    const s = ltScores[b.label] || { correct: 0, total: 0 };
+    const acc = s.total > 0 ? s.correct / s.total : null;
+    return { label: b.label, ...s, acc };
+  });
+
+  // 내 레벨 판정: 정답률 60% 이상인 구간 중 가장 높은 것
+  // 정답률 0% 구간이 나오면 그 전 구간까지가 내 레벨
+  let myBandIdx = -1;
+  for (let i = 0; i < bandResults.length; i++) {
+    const r = bandResults[i];
+    if (r.total === 0) continue;
+    if (r.acc >= 0.6) myBandIdx = i;
+    else if (r.acc < 0.4 && myBandIdx >= 0) break; // 급격히 틀리면 멈춤
+  }
+  if (myBandIdx === -1) myBandIdx = 0; // 최소 A1
+
+  const myBand = LEVEL_BANDS[myBandIdx];
+  const myBandLabel = bandResults[myBandIdx].label;
+
+  // CEFR 이모지
+  const cefrEmoji = { A1:'🌱', A2:'🌿', B1:'🌳', B2:'⭐', C1:'🔥', C2:'💎' };
+  document.getElementById('lt-result-emoji').textContent = cefrEmoji[myBandLabel] || '🎯';
+  document.getElementById('lt-cefr-result').textContent  = myBandLabel;
+
+  const cefrDesc = {
+    A1: '기초 단계 — 일상적인 기본 표현을 이해하는 수준입니다.',
+    A2: '초급 단계 — 친숙한 주제에 대한 간단한 표현을 이해합니다.',
+    B1: '중하급 단계 — 일상적인 상황을 대부분 이해하고 표현할 수 있습니다.',
+    B2: '중급 단계 — 복잡한 주제를 이해하고 자연스럽게 소통할 수 있습니다.',
+    C1: '중상급 단계 — 다양한 주제를 유창하게 표현할 수 있습니다.',
+    C2: '고급 단계 — 원어민 수준의 폭넓은 어휘력을 보유하고 있습니다.',
+  };
+  document.getElementById('lt-level-desc').textContent = cefrDesc[myBandLabel] || '';
+
+  // 구간별 바 차트
+  const barColors = { A1:'#4caf89', A2:'#5bbfa0', B1:'#4a7c6f', B2:'#c47c3e', C1:'#e06030', C2:'#c0503a' };
+  document.getElementById('lt-band-bars').innerHTML = bandResults.map((r, i) => {
+    const pct   = r.total > 0 ? Math.round(r.acc * 100) : null;
+    const isMe  = i === myBandIdx;
+    const color = barColors[r.label] || 'var(--accent)';
+    return `<div style="display:flex;align-items:center;gap:10px;${isMe ? 'font-weight:700;' : ''}">
+      <div style="width:28px;font-size:0.78rem;color:${isMe ? color : 'var(--muted)'};flex-shrink:0;">${r.label}</div>
+      <div style="flex:1;height:10px;background:var(--border);border-radius:5px;overflow:hidden;">
+        <div style="width:${pct ?? 0}%;height:100%;background:${color};border-radius:5px;transition:width 0.6s ease;"></div>
+      </div>
+      <div style="font-size:0.75rem;color:${isMe ? color : 'var(--muted)'};width:60px;text-align:right;">
+        ${pct !== null ? `${pct}% (${r.correct}/${r.total})` : '미응시'}
+      </div>
+      ${isMe ? `<div style="font-size:0.72rem;background:${color};color:#fff;border-radius:10px;padding:1px 7px;flex-shrink:0;">내 레벨</div>` : ''}
+    </div>`;
+  }).join('');
+
+  // 조언
+  const nextBand = LEVEL_BANDS[Math.min(myBandIdx + 1, LEVEL_BANDS.length - 1)];
+  const weakBands = bandResults.filter(r => r.total > 0 && r.acc !== null && r.acc < 0.6).map(r => r.label);
+  let advice = `현재 <b>${myBandLabel}</b> 수준으로 측정됐습니다. `;
+  if (myBandIdx < LEVEL_BANDS.length - 1) {
+    advice += `<b>${nextBand.label}</b> 단계로 올라가려면 해당 구간 단어를 집중적으로 학습해보세요.`;
+  } else {
+    advice += '단어장 최고 레벨까지 도달했습니다! 🎉';
+  }
+  if (weakBands.length > 0) {
+    advice += `<br><br>특히 <b>${weakBands.join(', ')}</b> 구간의 정답률이 낮으니 해당 레벨 필터로 복습해보세요.`;
+  }
+  document.getElementById('lt-advice').innerHTML = advice;
+
+  // 결과를 SR에 반영 (개별 정답/오답 기록 기반)
+  const srData = loadSR();
+  ltQueue.forEach(item => {
+    if (item._correct === undefined) return; // 미응시 문제 스킵
+    const entry = getSREntry(srData, item.word.en);
+    entry.lastSeen = Date.now();
+    if (item._correct) {
+      entry.correct = (entry.correct || 0) + 1;
+      entry.interval = nextInterval(entry, true, false);
+    } else {
+      entry.wrong = (entry.wrong || 0) + 1;
+      entry.interval = nextInterval(entry, false, false);
+    }
+    srData[item.word.en] = entry;
+  });
+  saveSR(srData);
+}
+
+
 loadQuizSettings();
 buildFilters();
 renderGrid();
