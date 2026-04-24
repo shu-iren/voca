@@ -5588,8 +5588,14 @@ function ltRenderBandPreview() {
 
 function startLevelTest() {
   const srData = loadSR();
-  // 구간별 균등 샘플링 — 각 구간에서 "낯선 단어 50% + 익숙한 단어 50%" 혼합
-  // 낯선 단어(한 번도 안 푼)가 섞여야 진짜 실력을 측정할 수 있음
+
+  // 최근 테스트에서 출제됐던 단어 수집 (최근 3회치)
+  const recentWords = new Set();
+  try {
+    const ltResults = JSON.parse(localStorage.getItem('lt_result') || '[]');
+    ltResults.slice(-3).forEach(r => (r.words || []).forEach(w => recentWords.add(w)));
+  } catch(e) {}
+
   const perBand = Math.max(1, Math.floor(ltN / LEVEL_BANDS.length));
   ltQueue = [];
   ltScores = {};
@@ -5599,35 +5605,19 @@ function startLevelTest() {
       const lv = getWordLevel(w);
       return lv >= b.min && lv <= b.max && (!w.type || w.type === 'word');
     });
-    const unseen = pool.filter(w => {
-      const e = getSREntry(srData, w.en);
-      return (e.correct + e.wrong) === 0;
-    });
-    const seen = pool.filter(w => {
-      const e = getSREntry(srData, w.en);
-      return (e.correct + e.wrong) > 0;
-    });
 
-    // 각각 셔플
-    unseen.sort(() => Math.random() - 0.5);
-    seen.sort(() => Math.random() - 0.5);
+    // 우선순위: 최근 미출제 > 미학습 > 나머지
+    // 각 그룹 안에서 셔플 후 순서대로 채움
+    const fresh   = pool.filter(w => !recentWords.has(w.en) && getSREntry(srData, w.en).correct + getSREntry(srData, w.en).wrong === 0);
+    const newSeen = pool.filter(w => !recentWords.has(w.en) && getSREntry(srData, w.en).correct + getSREntry(srData, w.en).wrong > 0);
+    const reused  = pool.filter(w =>  recentWords.has(w.en));
 
-    // 낯선 단어 절반 우선, 나머지 익숙한 단어로 채움
-    const halfUnseen = Math.ceil(perBand / 2);
-    const picked = [
-      ...unseen.slice(0, halfUnseen),
-      ...seen.slice(0, perBand - Math.min(halfUnseen, unseen.length))
-    ];
-    // 부족하면 나머지 pool로 보충
-    if (picked.length < perBand) {
-      const pickedKeys = new Set(picked.map(w => w.en));
-      const rest = pool.filter(w => !pickedKeys.has(w.en)).sort(() => Math.random() - 0.5);
-      picked.push(...rest.slice(0, perBand - picked.length));
-    }
-    picked.sort(() => Math.random() - 0.5).slice(0, perBand)
-      .forEach(w => ltQueue.push({ word: w, band: b.label }));
+    [fresh, newSeen, reused].forEach(g => g.sort(() => Math.random() - 0.5));
+
+    const ordered = [...fresh, ...newSeen, ...reused];
+    ordered.slice(0, perBand).forEach(w => ltQueue.push({ word: w, band: b.label }));
   });
-  // 전체 섞기
+
   ltQueue.sort(() => Math.random() - 0.5);
   ltIdx = 0;
   ltAnswered = false;
@@ -5819,7 +5809,8 @@ function ltShowResult() {
       numericLevel: myNumericLevel,
       dir: ltDir,
       n: ltQueue.length,
-      scores: ltScores
+      scores: ltScores,
+      words: ltQueue.map(item => item.word.en) // 출제 단어 목록 저장
     });
     if (ltResults.length > 20) ltResults.splice(0, ltResults.length - 20);
     localStorage.setItem('lt_result', JSON.stringify(ltResults));
