@@ -1156,7 +1156,7 @@
       <div style="display:flex;flex-direction:column;gap:6px;">
         <label style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">난이도 레벨 (1~1000)</label>
         <input id="edit-level" type="number" min="1" max="1000" placeholder="500" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.9rem;color:var(--text);background:var(--surface);outline:none;width:120px;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-        <div style="font-size:0.7rem;color:var(--muted);">1~200: A1 · 201~400: B1 · 401~600: B2 · 601~800: C1 · 801~1000: C2</div>
+        <div style="font-size:0.7rem;color:var(--muted);">1~150: A1 · 151~300: A2 · 301~450: B1 · 451~600: B2 · 601~750: C1 · 751+: C2</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px;">
         <button onclick="saveDetailEdit()" style="flex:2;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;">저장</button>
@@ -1208,7 +1208,7 @@
       <div style="display:flex;flex-direction:column;gap:6px;">
         <label style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">난이도 레벨 (1~1000)</label>
         <input id="add-level" type="number" min="1" max="1000" placeholder="500" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;font-family:inherit;font-size:0.9rem;color:var(--text);background:var(--surface);outline:none;width:120px;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'">
-        <div style="font-size:0.7rem;color:var(--muted);">1~200: A1 · 201~400: B1 · 401~600: B2 · 601~800: C1 · 801~1000: C2</div>
+        <div style="font-size:0.7rem;color:var(--muted);">1~150: A1 · 151~300: A2 · 301~450: B1 · 451~600: B2 · 601~750: C1 · 751+: C2</div>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px;">
         <button onclick="saveNewWord()" style="flex:2;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;">추가하기</button>
@@ -1944,12 +1944,12 @@ function getCATS() { return [...new Set(WORDS.map(w => w.cat))]; }
 
 // 레벨 구간 정의 (전역 — getFiltered에서도 참조)
 const LEVEL_BANDS = [
-  { id: 'lv-a1',  label: 'A1',    min: 0,   max: 100  },
-  { id: 'lv-a2',  label: 'A2',    min: 101, max: 200  },
-  { id: 'lv-b1',  label: 'B1',    min: 201, max: 400  },
-  { id: 'lv-b2',  label: 'B2',    min: 401, max: 600  },
-  { id: 'lv-c1',  label: 'C1',    min: 601, max: 750  },
-  { id: 'lv-c2',  label: 'C2',    min: 751, max: 9999 },
+  { id: 'lv-a1',  label: 'A1',  min: 0,   max: 150  },
+  { id: 'lv-a2',  label: 'A2',  min: 151, max: 300  },
+  { id: 'lv-b1',  label: 'B1',  min: 301, max: 450  },
+  { id: 'lv-b2',  label: 'B2',  min: 451, max: 600  },
+  { id: 'lv-c1',  label: 'C1',  min: 601, max: 750  },
+  { id: 'lv-c2',  label: 'C2',  min: 751, max: 9999 },
 ];
 
 let catCollapseOpen = false;
@@ -2228,11 +2228,11 @@ function calcMyLevel(srData) {
 
 // 레벨 → CEFR 라벨
 function levelToCEFR(lv) {
-  if (lv <= 200) return 'A1~A2';
-  if (lv <= 400) return 'B1';
-  if (lv <= 600) return 'B1~B2';
-  if (lv <= 750) return 'B2~C1';
-  if (lv <= 900) return 'C1';
+  if (lv <= 150) return 'A1';
+  if (lv <= 300) return 'A2';
+  if (lv <= 450) return 'B1';
+  if (lv <= 600) return 'B2';
+  if (lv <= 750) return 'C1';
   return 'C2';
 }
 
@@ -3067,8 +3067,8 @@ function downloadWords() {
   - type: "word" | "phrase" | "sentence" 중 하나
   - ex: 자연스러운 영어 예문 1개 (단어/구문은 필수, 문장 타입은 생략 가능)
   - level: 영어 난이도 1~1000 숫자 (필수)
-      1~200: A1~A2 (매우 기초), 201~400: B1 (기초~중급),
-      401~600: B2 (중급), 601~800: C1 (중상급), 801~1000: C2 (고급)
+      1~150: A1 (기초), 151~300: A2 (초급), 301~450: B1 (중하급),
+      451~600: B2 (중급), 601~750: C1 (중상급), 751+: C2 (고급)
   - addedAt: 현재 타임스탬프(ms), 없으면 생략 가능
 
 기존 단어에 level이나 ex가 없는 경우, 분석해서 채워주세요.
@@ -4329,31 +4329,32 @@ function renderStats() {
   const levelCardEl = document.getElementById('stats-my-level');
   if (levelCardEl) {
     const bands = [
-      {label:'A1~A2', range:'1~200',  max:200},
-      {label:'B1',    range:'201~400', max:400},
-      {label:'B1~B2', range:'401~600', max:600},
-      {label:'B2~C1', range:'601~750', max:750},
-      {label:'C1',    range:'751~900', max:900},
-      {label:'C2',    range:'901~1000',max:1000},
+      {label:'A1', range:'1~150',   max:150},
+      {label:'A2', range:'151~300', max:300},
+      {label:'B1', range:'301~450', max:450},
+      {label:'B2', range:'451~600', max:600},
+      {label:'C1', range:'601~750', max:750},
+      {label:'C2', range:'751+',    max:9999},
     ];
     // 레벨 분포 (단어장 전체)
-    const buckets = [0,0,0,0,0];
+    const buckets = [0,0,0,0,0,0];
     WORDS.forEach(w => {
       const lv = getWordLevel(w);
-      if      (lv <= 200)  buckets[0]++;
-      else if (lv <= 400)  buckets[1]++;
-      else if (lv <= 600)  buckets[2]++;
-      else if (lv <= 800)  buckets[3]++;
-      else                 buckets[4]++;
+      if      (lv <= 150)  buckets[0]++;
+      else if (lv <= 300)  buckets[1]++;
+      else if (lv <= 450)  buckets[2]++;
+      else if (lv <= 600)  buckets[3]++;
+      else if (lv <= 750)  buckets[4]++;
+      else                 buckets[5]++;
     });
-    const bucketLabels = ['~200\n(A1~A2)','~400\n(B1)','~600\n(B2)','~800\n(C1)','~1000\n(C2)'];
+    const bucketLabels = ['~150\n(A1)','~300\n(A2)','~450\n(B1)','~600\n(B2)','~750\n(C1)','751+\n(C2)'];
     const maxBucket = Math.max(...buckets, 1);
     const barsHtml = buckets.map((cnt, i) => {
       const pct = Math.round(cnt / maxBucket * 100);
       const isMyBand = (
-        (i===0 && myLevel<=200) || (i===1 && myLevel>200 && myLevel<=400) ||
-        (i===2 && myLevel>400 && myLevel<=600) || (i===3 && myLevel>600 && myLevel<=800) ||
-        (i===4 && myLevel>800)
+        (i===0 && myLevel<=150) || (i===1 && myLevel>150 && myLevel<=300) ||
+        (i===2 && myLevel>300 && myLevel<=450) || (i===3 && myLevel>450 && myLevel<=600) ||
+        (i===4 && myLevel>600 && myLevel<=750) || (i===5 && myLevel>750)
       );
       return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px;">
         <div style="font-size:0.65rem;color:var(--muted);">${cnt}</div>
