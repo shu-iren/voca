@@ -2282,30 +2282,48 @@ function getWordLevel(word) {
   return 500;
 }
 
-// 내 레벨 계산: 정답률 50% 이상인 단어들의 레벨 가중평균
-// (학습 기록이 부족하면 단어장 평균 레벨 반환)
+// ── 수동 레벨 설정 ──
+function loadManualLevel() {
+  const v = localStorage.getItem('my_level_override');
+  return v !== null ? parseInt(v) : null;
+}
+function saveManualLevel(lv) {
+  if (lv === null) localStorage.removeItem('my_level_override');
+  else localStorage.setItem('my_level_override', String(lv));
+}
+
+// 내 레벨 계산 (수동 설정 우선)
 function calcMyLevel(srData) {
+  const manual = loadManualLevel();
+  if (manual !== null) return manual;
+  return calcAutoLevel(srData);
+}
+
+// SR 기반 자동 레벨: 가중 중앙값
+// 각 단어를 (레벨, 가중치)로 정렬 후 누적 50% 지점 → "잘 아는 단어의 중간값"
+function calcAutoLevel(srData) {
   const studied = WORDS.filter(w => {
     const e = getSREntry(srData, w.en);
     return (e.correct + e.wrong) >= 2;
   });
   if (studied.length < 5) {
-    // 학습 기록 부족 → 단어장 전체 최솟값 기준
     const levels = WORDS.map(w => getWordLevel(w));
     return Math.round(levels.reduce((a,b)=>a+b,0)/levels.length);
   }
-  let weightedSum = 0, weightSum = 0;
-  studied.forEach(w => {
+  const items = studied.map(w => {
     const e = getSREntry(srData, w.en);
     const total = e.correct + e.wrong;
     const acc = e.correct / total;
-    const lv = getWordLevel(w);
-    // 정답률이 높을수록, 시도 횟수가 많을수록 내 레벨에 더 반영
-    const weight = acc * Math.min(total, 10);
-    weightedSum += lv * weight;
-    weightSum += weight;
-  });
-  return weightSum > 0 ? Math.round(weightedSum / weightSum) : 300;
+    return { lv: getWordLevel(w), weight: acc * Math.log2(total + 1) };
+  }).sort((a, b) => a.lv - b.lv);
+  const totalW = items.reduce((s, x) => s + x.weight, 0);
+  if (totalW <= 0) return 300;
+  let cum = 0;
+  for (const item of items) {
+    cum += item.weight;
+    if (cum >= totalW * 0.5) return item.lv;
+  }
+  return items[items.length - 1].lv;
 }
 
 // 레벨 → CEFR 라벨
@@ -4397,7 +4415,9 @@ function renderStats() {
   const acc = totalAttempts ? Math.round(totalC/totalAttempts*100) : null;
 
   // 내 레벨 계산
-  const myLevel = calcMyLevel(srData);
+  const manual = loadManualLevel();
+  const autoLevel = calcAutoLevel(srData);
+  const myLevel = manual !== null ? manual : autoLevel;
   const myCEFR  = levelToCEFR(myLevel);
 
   document.getElementById('stats-summary').innerHTML = [
@@ -4410,33 +4430,25 @@ function renderStats() {
   // 내 레벨 카드
   const levelCardEl = document.getElementById('stats-my-level');
   if (levelCardEl) {
-    const bands = [
-      {label:'A1', range:'1~150',   max:150},
-      {label:'A2', range:'151~300', max:300},
-      {label:'B1', range:'301~450', max:450},
-      {label:'B2', range:'451~600', max:600},
-      {label:'C1', range:'601~750', max:750},
-      {label:'C2', range:'751+',    max:9999},
-    ];
-    // 레벨 분포 (단어장 전체)
+    // 레벨 분포 바 차트
     const buckets = [0,0,0,0,0,0];
     WORDS.forEach(w => {
       const lv = getWordLevel(w);
-      if      (lv <= 150)  buckets[0]++;
-      else if (lv <= 300)  buckets[1]++;
-      else if (lv <= 450)  buckets[2]++;
-      else if (lv <= 600)  buckets[3]++;
-      else if (lv <= 750)  buckets[4]++;
-      else                 buckets[5]++;
+      if      (lv <= 150) buckets[0]++;
+      else if (lv <= 300) buckets[1]++;
+      else if (lv <= 450) buckets[2]++;
+      else if (lv <= 600) buckets[3]++;
+      else if (lv <= 750) buckets[4]++;
+      else                buckets[5]++;
     });
     const bucketLabels = ['~150\n(A1)','~300\n(A2)','~450\n(B1)','~600\n(B2)','~750\n(C1)','751+\n(C2)'];
     const maxBucket = Math.max(...buckets, 1);
     const barsHtml = buckets.map((cnt, i) => {
       const pct = Math.round(cnt / maxBucket * 100);
       const isMyBand = (
-        (i===0 && myLevel<=150) || (i===1 && myLevel>150 && myLevel<=300) ||
-        (i===2 && myLevel>300 && myLevel<=450) || (i===3 && myLevel>450 && myLevel<=600) ||
-        (i===4 && myLevel>600 && myLevel<=750) || (i===5 && myLevel>750)
+        (i===0&&myLevel<=150)||(i===1&&myLevel>150&&myLevel<=300)||
+        (i===2&&myLevel>300&&myLevel<=450)||(i===3&&myLevel>450&&myLevel<=600)||
+        (i===4&&myLevel>600&&myLevel<=750)||(i===5&&myLevel>750)
       );
       return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:4px;">
         <div style="font-size:0.65rem;color:var(--muted);">${cnt}</div>
@@ -4446,22 +4458,54 @@ function renderStats() {
         <div style="font-size:0.6rem;color:${isMyBand?'var(--accent)':'var(--muted)'};text-align:center;white-space:pre-line;">${bucketLabels[i]}</div>
       </div>`;
     }).join('');
+
+    // 수동 설정용 CEFR 버튼
+    const cefrNums = {A1:75, A2:225, B1:375, B2:525, C1:675, C2:825};
+    const cefrBtns = ['A1','A2','B1','B2','C1','C2'].map(label => {
+      const isSel = manual !== null && levelToCEFR(manual) === label;
+      return `<button onclick="setManualLevelCEFR('${label}',${cefrNums[label]})"
+        style="padding:5px 12px;border-radius:8px;border:1.5px solid ${isSel?'var(--accent)':'var(--border)'};
+        background:${isSel?'var(--accent)':'none'};color:${isSel?'#fff':'var(--muted)'};
+        font-family:inherit;font-size:0.78rem;cursor:pointer;transition:all 0.15s;">${label}</button>`;
+    }).join('');
+
+    // 마지막 레벨 테스트 정보
+    const ltResults = (() => { try { return JSON.parse(localStorage.getItem('lt_result')||'[]'); } catch { return []; } })();
+    const lastLT = ltResults.length ? ltResults[ltResults.length - 1] : null;
+    const ltInfo = lastLT
+      ? `마지막 레벨 테스트: <b>${lastLT.level}</b>${lastLT.numericLevel ? ` · Lv.${lastLT.numericLevel}` : ''} (${new Date(lastLT.ts).toLocaleDateString('ko-KR')})`
+      : '레벨 테스트를 아직 진행하지 않았습니다.';
+
     levelCardEl.innerHTML =
       `<div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px;">📊 내 레벨 & 단어장 분포</div>` +
       `<div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;flex-wrap:wrap;">` +
         `<div style="text-align:center;">` +
-          `<div style="font-size:2.2rem;font-weight:700;color:var(--accent);">${myLevel}</div>` +
-          `<div style="font-size:0.72rem;color:var(--muted);">내 레벨</div>` +
-        `</div>` +
-        `<div style="text-align:center;">` +
-          `<div style="font-size:1.3rem;font-weight:600;color:var(--accent2);">${myCEFR}</div>` +
-          `<div style="font-size:0.72rem;color:var(--muted);">CEFR 기준</div>` +
+          `<div style="font-size:2.2rem;font-weight:700;color:var(--accent);line-height:1.1;">${myLevel}</div>` +
+          `<div style="font-size:1rem;font-weight:600;color:var(--accent2);margin-top:2px;">${myCEFR}</div>` +
+          `<div style="font-size:0.7rem;color:var(--muted);margin-top:2px;">${manual!==null?'수동 설정':'자동 계산'}</div>` +
         `</div>` +
         `<div style="font-size:0.78rem;color:var(--muted);flex:1;min-width:160px;">` +
           `단어장 ${WORDS.length}개 중 내 레벨(±100) 범위: <b style="color:var(--text);">${WORDS.filter(w=>Math.abs(getWordLevel(w)-myLevel)<=100).length}개</b>` +
         `</div>` +
       `</div>` +
-      `<div style="display:flex;gap:6px;align-items:flex-end;height:100px;">${barsHtml}</div>`;
+      `<div style="display:flex;gap:6px;align-items:flex-end;height:100px;margin-bottom:20px;">${barsHtml}</div>` +
+      `<div style="border-top:1px solid var(--border);padding-top:16px;">` +
+        `<div style="font-size:0.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;">⚙️ 레벨 설정</div>` +
+        `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">${cefrBtns}</div>` +
+        `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">` +
+          `<input id="manual-level-input" type="number" min="1" max="1000" placeholder="숫자 입력 (1~1000)" value="${manual !== null ? manual : ''}"` +
+          ` style="padding:6px 10px;border-radius:8px;border:1.5px solid var(--border);background:var(--surface);font-family:inherit;font-size:0.83rem;color:var(--text);width:180px;outline:none;"` +
+          ` oninput="this.style.borderColor='var(--accent2)'"` +
+          ` onkeydown="if(event.key==='Enter')applyManualLevelInput()">` +
+          `<button onclick="applyManualLevelInput()" style="padding:6px 14px;border-radius:8px;border:1.5px solid var(--accent2);background:none;color:var(--accent2);font-family:inherit;font-size:0.78rem;cursor:pointer;">적용</button>` +
+        `</div>` +
+        `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">` +
+          `<button onclick="setAutoLevel()" style="padding:6px 14px;border-radius:8px;border:1.5px solid ${manual===null?'var(--accent)':'var(--border)'};background:none;color:${manual===null?'var(--accent)':'var(--muted)'};font-family:inherit;font-size:0.78rem;cursor:pointer;">` +
+            `🔄 자동 계산 (${levelToCEFR(autoLevel)} · Lv.${autoLevel})` +
+          `</button>` +
+        `</div>` +
+        `<div style="margin-top:10px;font-size:0.75rem;color:var(--muted);">${ltInfo}</div>` +
+      `</div>`;
   }
 
   // 최장 연속 학습일
@@ -5520,35 +5564,70 @@ function ltShowSetup() {
 function ltRenderBandPreview() {
   const el = document.getElementById('lt-band-preview');
   if (!el) return;
+  const srData = loadSR();
   const perBand = Math.max(1, Math.floor(ltN / LEVEL_BANDS.length));
-  el.innerHTML = '<div style="font-size:0.72rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">구간별 출제 예정</div>' +
+  el.innerHTML = '<div style="font-size:0.72rem;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">구간별 출제 예정 <span style="font-weight:normal;text-transform:none;">· 🆕 낯선 단어 우선 혼합</span></div>' +
     LEVEL_BANDS.map(b => {
-      const avail = WORDS.filter(w => { const lv = getWordLevel(w); return lv >= b.min && lv <= b.max; }).length;
+      const pool = WORDS.filter(w => { const lv = getWordLevel(w); return lv >= b.min && lv <= b.max; });
+      const avail = pool.length;
+      const unseenCnt = pool.filter(w => { const e = getSREntry(srData, w.en); return (e.correct+e.wrong)===0; }).length;
       const actual = Math.min(perBand, avail);
       const barW = avail > 0 ? Math.round(actual / perBand * 100) : 0;
+      const unseenTag = unseenCnt > 0
+        ? `<span style="font-size:0.65rem;color:var(--accent);margin-left:4px;">🆕 ${Math.min(Math.ceil(perBand/2), unseenCnt)}개 미학습</span>`
+        : '';
       return `<div style="display:flex;align-items:center;gap:10px;">
         <div style="width:28px;font-size:0.72rem;font-weight:700;color:var(--accent);flex-shrink:0;">${b.label}</div>
         <div style="flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
           <div style="width:${barW}%;height:100%;background:var(--accent);border-radius:3px;"></div>
         </div>
-        <div style="font-size:0.7rem;color:var(--muted);width:60px;text-align:right;">${actual}문제 / ${avail}개</div>
+        <div style="font-size:0.7rem;color:var(--muted);width:60px;text-align:right;">${actual}/${avail}개</div>
+        ${unseenTag}
       </div>`;
     }).join('');
 }
 
 function startLevelTest() {
-  // 구간별 균등 샘플링
+  const srData = loadSR();
+  // 구간별 균등 샘플링 — 각 구간에서 "낯선 단어 50% + 익숙한 단어 50%" 혼합
+  // 낯선 단어(한 번도 안 푼)가 섞여야 진짜 실력을 측정할 수 있음
   const perBand = Math.max(1, Math.floor(ltN / LEVEL_BANDS.length));
   ltQueue = [];
   ltScores = {};
   LEVEL_BANDS.forEach(b => {
     ltScores[b.label] = { correct: 0, total: 0 };
     const pool = WORDS.filter(w => { const lv = getWordLevel(w); return lv >= b.min && lv <= b.max; });
-    // 셔플 후 perBand개 추출
-    const shuffled = pool.sort(() => Math.random() - 0.5).slice(0, perBand);
-    shuffled.forEach(w => ltQueue.push({ word: w, band: b.label }));
+
+    // 낯선(미학습) / 익숙(학습 이력 있음) 분리
+    const unseen = pool.filter(w => {
+      const e = getSREntry(srData, w.en);
+      return (e.correct + e.wrong) === 0;
+    });
+    const seen = pool.filter(w => {
+      const e = getSREntry(srData, w.en);
+      return (e.correct + e.wrong) > 0;
+    });
+
+    // 각각 셔플
+    unseen.sort(() => Math.random() - 0.5);
+    seen.sort(() => Math.random() - 0.5);
+
+    // 낯선 단어 절반 우선, 나머지 익숙한 단어로 채움
+    const halfUnseen = Math.ceil(perBand / 2);
+    const picked = [
+      ...unseen.slice(0, halfUnseen),
+      ...seen.slice(0, perBand - Math.min(halfUnseen, unseen.length))
+    ];
+    // 부족하면 나머지 pool로 보충
+    if (picked.length < perBand) {
+      const pickedKeys = new Set(picked.map(w => w.en));
+      const rest = pool.filter(w => !pickedKeys.has(w.en)).sort(() => Math.random() - 0.5);
+      picked.push(...rest.slice(0, perBand - picked.length));
+    }
+    picked.sort(() => Math.random() - 0.5).slice(0, perBand)
+      .forEach(w => ltQueue.push({ word: w, band: b.label }));
   });
-  // 전체 섞기 (구간 순서 무작위)
+  // 전체 섞기
   ltQueue.sort(() => Math.random() - 0.5);
   ltIdx = 0;
   ltAnswered = false;
@@ -5663,16 +5742,32 @@ function ltShowResult() {
     return { label: b.label, ...s, acc };
   });
 
-  // 내 레벨 판정: 정답률 60% 이상인 구간 중 가장 높은 것
-  // 정답률 0% 구간이 나오면 그 전 구간까지가 내 레벨
-  let myBandIdx = -1;
-  for (let i = 0; i < bandResults.length; i++) {
-    const r = bandResults[i];
-    if (r.total === 0) continue;
-    if (r.acc >= 0.6) myBandIdx = i;
-    else if (r.acc < 0.4 && myBandIdx >= 0) break; // 급격히 틀리면 멈춤
+  // 내 레벨 판정: 가중 중앙값
+  // 각 구간에서 맞힌 개수를 (구간 중간 레벨, 가중치)로 쌓아
+  // 누적 50% 지점의 구간이 내 레벨
+  const bandMid = { A1:75, A2:225, B1:375, B2:525, C1:675, C2:825 };
+  let weightedItems = [];
+  bandResults.forEach(r => {
+    if (r.correct > 0) {
+      weightedItems.push({ lv: bandMid[r.label] || 500, w: r.correct, label: r.label });
+    }
+  });
+  weightedItems.sort((a, b) => a.lv - b.lv);
+  const totalWLT = weightedItems.reduce((s, x) => s + x.w, 0);
+  let myBandIdx = 0;
+  let myNumericLevel = bandMid['A1'];
+  if (totalWLT > 0) {
+    let cum = 0;
+    for (const item of weightedItems) {
+      cum += item.w;
+      if (cum >= totalWLT * 0.5) {
+        myNumericLevel = item.lv;
+        const idx = LEVEL_BANDS.findIndex(b => item.lv >= b.min && item.lv <= b.max);
+        myBandIdx = idx >= 0 ? idx : 0;
+        break;
+      }
+    }
   }
-  if (myBandIdx === -1) myBandIdx = 0; // 최소 A1
 
   const myBand = LEVEL_BANDS[myBandIdx];
   const myBandLabel = bandResults[myBandIdx].label;
@@ -5680,7 +5775,8 @@ function ltShowResult() {
   // CEFR 이모지
   const cefrEmoji = { A1:'🌱', A2:'🌿', B1:'🌳', B2:'⭐', C1:'🔥', C2:'💎' };
   document.getElementById('lt-result-emoji').textContent = cefrEmoji[myBandLabel] || '🎯';
-  document.getElementById('lt-cefr-result').textContent  = myBandLabel;
+  document.getElementById('lt-cefr-result').innerHTML =
+    `${myBandLabel} <span style="font-size:1.4rem;color:var(--accent2);font-weight:600;">· Lv.${myNumericLevel}</span>`;
 
   const cefrDesc = {
     A1: '기초 단계 — 일상적인 기본 표현을 이해하는 수준입니다.',
@@ -5724,24 +5820,43 @@ function ltShowResult() {
   }
   document.getElementById('lt-advice').innerHTML = advice;
 
-  // 결과를 SR에 반영 (개별 정답/오답 기록 기반)
-  const srData = loadSR();
-  ltQueue.forEach(item => {
-    if (item._correct === undefined) return; // 미응시 문제 스킵
-    const entry = getSREntry(srData, item.word.en);
-    entry.lastSeen = Date.now();
-    if (item._correct) {
-      entry.correct = (entry.correct || 0) + 1;
-      entry.interval = nextInterval(entry, true, false);
-    } else {
-      entry.wrong = (entry.wrong || 0) + 1;
-      entry.interval = nextInterval(entry, false, false);
-    }
-    srData[item.word.en] = entry;
-  });
-  saveSR(srData);
+  // 결과를 lt_result에만 저장 (sr_data에는 영향 없음)
+  try {
+    const ltResults = JSON.parse(localStorage.getItem('lt_result') || '[]');
+    ltResults.push({
+      ts: Date.now(),
+      level: myBandLabel,
+      numericLevel: myNumericLevel,
+      dir: ltDir,
+      n: ltQueue.length,
+      scores: ltScores
+    });
+    if (ltResults.length > 20) ltResults.splice(0, ltResults.length - 20);
+    localStorage.setItem('lt_result', JSON.stringify(ltResults));
+  } catch(e) {}
 }
 
+
+// ── 수동 레벨 설정 헬퍼 ──
+function setManualLevelCEFR(cefrLabel, lv) {
+  saveManualLevel(lv);
+  renderStats();
+}
+function setAutoLevel() {
+  saveManualLevel(null);
+  renderStats();
+}
+function applyManualLevelInput() {
+  const inp = document.getElementById('manual-level-input');
+  if (!inp) return;
+  const v = parseInt(inp.value);
+  if (isNaN(v) || v < 1 || v > 1000) {
+    inp.style.borderColor = 'var(--wrong)';
+    return;
+  }
+  saveManualLevel(v);
+  renderStats();
+}
 
 loadQuizSettings();
 buildFilters();
