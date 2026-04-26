@@ -1849,12 +1849,6 @@
   <!-- 최장 연속 학습일 -->
   <div id="stats-longest-streak-card" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;"></div>
 
-  <!-- 정답률 by 카테고리 -->
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;">
-    <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;">카테고리별 정답률</div>
-    <div id="stats-by-cat" style="display:flex;flex-direction:column;gap:10px;"></div>
-  </div>
-
   <!-- 최근 7일 학습 -->
   <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px 24px;">
     <div style="font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:16px;">최근 7일 학습량</div>
@@ -4518,16 +4512,6 @@ function renderStats() {
       (longestInfo.streak > 0 ? '<div style="font-size:0.82rem;color:var(--muted);">' + longestInfo.start + ' ~ ' + longestInfo.end + '</div>' : '<div style="font-size:0.82rem;color:var(--muted);">아직 기록 없음</div>') +
       '</div>';
   }
-
-  const cats = [...new Set(WORDS.map(w=>w.cat))];
-  document.getElementById('stats-by-cat').innerHTML = cats.map(function(cat) {
-    const ws = WORDS.filter(w=>w.cat===cat);
-    let c=0,t=0;
-    ws.forEach(w=>{ const e=getSREntry(srData,w.en); c+=e.correct||0; t+=(e.correct||0)+(e.wrong||0); });
-    const pct = t ? Math.round(c/t*100) : null;
-    const bar = pct!=null ? pct : 0;
-    return '<div><div style="display:flex;justify-content:space-between;font-size:0.8rem;margin-bottom:4px;"><span style="color:var(--text);">'+cat+'</span><span style="color:var(--muted);">'+(pct!=null?pct+'%':'미학습')+'</span></div><div style="background:var(--border);border-radius:4px;height:6px;"><div style="background:var(--accent);width:'+bar+'%;height:6px;border-radius:4px;"></div></div></div>';
-  }).join('');
 
   try {
     const history = JSON.parse(localStorage.getItem('study_history')||'{}');
